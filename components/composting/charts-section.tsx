@@ -8,8 +8,12 @@ import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, Cell
 } from "recharts"
 import { Thermometer, Droplets, Clock, BarChart3 } from "lucide-react"
+import { modelMetadata } from "@/lib/model-metadata"
 
-// Datos para gráficas
+// Datos para gráficas de referencia (rangos óptimos según la literatura
+// citada en la pestaña "Referencias"; ver references-section.tsx). Estas
+// curvas describen el consenso científico, no la salida del modelo entrenado
+// -- esa comparación vive en la pestaña "Modelo" (model-training.tsx).
 const temperatureData = Array.from({ length: 61 }, (_, i) => {
   const t = i + 15
   let efficiency: number
@@ -42,13 +46,31 @@ const timeData = Array.from({ length: 120 }, (_, i) => {
   return { dia, produccion: Number(produccion.toFixed(1)) }
 })
 
-const importanceData = [
-  { variable: "Temperatura", importancia: 0.35, fill: "#f97316" },
-  { variable: "Humedad", importancia: 0.25, fill: "#22d3ee" },
-  { variable: "Tipo residuo", importancia: 0.18, fill: "#4ade80" },
-  { variable: "Aireación", importancia: 0.12, fill: "#a78bfa" },
-  { variable: "Tiempo", importancia: 0.10, fill: "#facc15" },
-]
+// Importancia de variables REAL, tomada de feature_importances_ del
+// RandomForestRegressor entrenado sobre el dataset real (ver
+// ml/train_tabular.py y lib/model-metadata.ts). Ya no son porcentajes
+// inventados.
+const importanceColors: Record<string, string> = {
+  Day: "#facc15",
+  Temperature: "#f97316",
+  "MC(%)": "#22d3ee",
+  "C/N Ratio": "#4ade80",
+}
+
+const importanceLabels: Record<string, string> = {
+  Day: "Tiempo de proceso",
+  Temperature: "Temperatura",
+  "MC(%)": "Humedad",
+  "C/N Ratio": "Tipo de residuo (C/N)",
+}
+
+const importanceData = Object.entries(modelMetadata.regressor.featureImportances)
+  .map(([key, value]) => ({
+    variable: importanceLabels[key] ?? key,
+    importancia: value,
+    fill: importanceColors[key] ?? "#a78bfa",
+  }))
+  .sort((a, b) => b.importancia - a.importancia)
 
 export function ChartsSection() {
   const [activeTab, setActiveTab] = useState("temperatura")
@@ -83,7 +105,7 @@ export function ChartsSection() {
           <Card className="p-6 bg-card border-border">
             <h3 className="text-lg font-semibold mb-2 text-foreground">Efecto de la Temperatura</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              La fase termófila (45-60°C) es óptima para la degradación de patógenos y materia orgánica.
+              La fase termófila (45-60°C) es óptima para la degradación de patógenos y materia orgánica, según la literatura citada en Referencias.
             </p>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -134,7 +156,7 @@ export function ChartsSection() {
           <Card className="p-6 bg-card border-border">
             <h3 className="text-lg font-semibold mb-2 text-foreground">Efecto de la Humedad</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              La humedad óptima (45-65%) permite la actividad microbiana sin saturar el material.
+              La humedad óptima (45-65%) permite la actividad microbiana sin saturar el material, según la literatura citada en Referencias.
             </p>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -228,7 +250,7 @@ export function ChartsSection() {
           <Card className="p-6 bg-card border-border">
             <h3 className="text-lg font-semibold mb-2 text-foreground">Importancia de Variables</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Contribución relativa de cada variable en las predicciones del modelo Random Forest.
+              Contribución relativa real de cada variable (<code>feature_importances_</code>) en las predicciones del <code>RandomForestRegressor</code> entrenado con {modelMetadata.dataset.nSamples} muestras reales de {modelMetadata.dataset.source}.
             </p>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -245,7 +267,7 @@ export function ChartsSection() {
                     dataKey="variable"
                     stroke="#94a3b8"
                     tick={{ fill: "#e2e8f0", fontSize: 12 }}
-                    width={90}
+                    width={140}
                   />
                   <Tooltip
                     contentStyle={{
@@ -254,7 +276,7 @@ export function ChartsSection() {
                       borderRadius: "8px",
                       color: "hsl(var(--foreground))"
                     }}
-                    formatter={(value: number) => [`${(value * 100).toFixed(0)}%`, "Importancia"]}
+                    formatter={(value: number) => [`${(value * 100).toFixed(1)}%`, "Importancia"]}
                   />
                   <Legend />
                   <Bar

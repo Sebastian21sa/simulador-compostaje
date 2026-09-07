@@ -11,27 +11,13 @@ import { ReferencesSection } from "@/components/composting/references-section"
 import { motion } from "framer-motion"
 import { Leaf, FlaskConical, BarChart3, BookOpen, Sparkles } from "lucide-react"
 
-// Factores de residuo
-const factoresResiduo: Record<string, { eficiencia: number; cnRatio: number }> = {
-  comida: { eficiencia: 1.0, cnRatio: 20 },
-  poda: { eficiencia: 0.85, cnRatio: 60 },
-  papel: { eficiencia: 0.7, cnRatio: 150 },
-  cafe: { eficiencia: 0.9, cnRatio: 25 },
-  huevo: { eficiencia: 0.75, cnRatio: 9 },
-  mezcla: { eficiencia: 0.92, cnRatio: 30 },
-}
-
-// Funciones de cálculo
-function calcTempFactor(T: number): number {
-  if (T >= 45 && T <= 60) return 1.0
-  if (T < 45) return Math.max(0.4, 0.4 + (T - 15) * 0.02)
-  return Math.max(0.3, 1.0 - (T - 60) * 0.025)
-}
-
-function calcHumedadFactor(H: number): number {
-  if (H >= 45 && H <= 65) return 1.0
-  if (H < 45) return Math.max(0.5, 0.5 + (H - 20) * 0.0167)
-  return Math.max(0.5, 1.0 - (H - 65) * 0.02)
+interface PredictResponse {
+  produccion: number
+  eficiencia: number
+  calidad: string
+  colorCalidad: string
+  porcentaje: number
+  scoreModelo: number
 }
 
 export default function CompostingSimulator() {
@@ -43,6 +29,7 @@ export default function CompostingSimulator() {
   const [aireacion, setAireacion] = useState(0.8)
   const [tiempoProceso, setTiempoProceso] = useState(45)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<{
     produccion: number
     eficiencia: number
@@ -51,51 +38,45 @@ export default function CompostingSimulator() {
     porcentaje: number
   } | null>(null)
 
-  const handlePredict = useCallback(() => {
+  const handlePredict = useCallback(async () => {
     setIsLoading(true)
-    
-    // Simular tiempo de procesamiento
-    setTimeout(() => {
-      const residuoData = factoresResiduo[tipoResiduo]
-      const eficienciaBase = residuoData.eficiencia
-      
-      const tempFactor = calcTempFactor(temperatura)
-      const humedadFactor = calcHumedadFactor(humedad)
-      const aireacionFactor = aireacion >= 0.8 ? 1.0 : 0.7 + aireacion * 0.375
-      const tiempoFactor = Math.min(1.0, tiempoProceso / 60)
-      
-      let eficienciaTotal = eficienciaBase * tempFactor * humedadFactor * aireacionFactor * tiempoFactor
-      eficienciaTotal = Math.min(0.98, Math.max(0.25, eficienciaTotal))
-      
-      const produccionCompost = cantidad * 0.65 * eficienciaTotal
-      
-      let calidad: string
-      let colorCalidad: string
-      
-      if (eficienciaTotal >= 0.85) {
-        calidad = "🌟 Excelente"
-        colorCalidad = "#4CAF50"
-      } else if (eficienciaTotal >= 0.70) {
-        calidad = "✅ Buena"
-        colorCalidad = "#8BC34A"
-      } else if (eficienciaTotal >= 0.55) {
-        calidad = "⚠️ Aceptable"
-        colorCalidad = "#FFC107"
-      } else {
-        calidad = "❌ Baja"
-        colorCalidad = "#F44336"
-      }
-      
-      setResults({
-        produccion: produccionCompost,
-        eficiencia: eficienciaTotal,
-        calidad,
-        colorCalidad,
-        porcentaje: (produccionCompost / cantidad) * 100
+    setError(null)
+
+    try {
+      const response = await fetch("/api/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipoResiduo,
+          cantidad,
+          temperatura,
+          humedad,
+          aireacion,
+          tiempoProceso,
+        }),
       })
-      
+
+      if (!response.ok) {
+        throw new Error("La API de prediccion respondio con un error")
+      }
+
+      const data: PredictResponse = await response.json()
+
+      setResults({
+        produccion: data.produccion,
+        eficiencia: data.eficiencia,
+        calidad: data.calidad,
+        colorCalidad: data.colorCalidad,
+        porcentaje: data.porcentaje,
+      })
+    } catch (err) {
+      console.error("Error al predecir con el modelo real:", err)
+      setError(
+        "No se pudo calcular la prediccion con el modelo real. Intenta de nuevo en unos segundos."
+      )
+    } finally {
       setIsLoading(false)
-    }, 800)
+    }
   }, [tipoResiduo, cantidad, temperatura, humedad, aireacion, tiempoProceso])
 
   return (
@@ -137,7 +118,7 @@ export default function CompostingSimulator() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-2">¿Qué es este simulador?</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Este simulador utiliza un modelo de <span className="text-primary font-medium">Machine Learning (Random Forest)</span> para predecir la cantidad y calidad del compost que se puede obtener a partir de residuos orgánicos. Está basado en parámetros como el tipo de residuo, temperatura, humedad, aireación y tiempo de proceso, extraídos de <span className="text-primary font-medium">investigaciones científicas revisadas por pares</span>.
+                  Este simulador utiliza un modelo de <span className="text-primary font-medium">Machine Learning (Random Forest)</span> entrenado con un dataset real de sensores de compostaje para predecir la cantidad y calidad del compost que se puede obtener a partir de residuos orgánicos. Está basado en parámetros como el tipo de residuo, temperatura, humedad, aireación y tiempo de proceso, validado contra <span className="text-primary font-medium">investigaciones científicas revisadas por pares</span>.
                 </p>
               </div>
             </div>
@@ -196,6 +177,11 @@ export default function CompostingSimulator() {
                     onPredict={handlePredict}
                     isLoading={isLoading}
                   />
+                  {error && (
+                    <p className="mt-4 text-sm text-destructive" role="alert">
+                      {error}
+                    </p>
+                  )}
                 </Card>
               </div>
 

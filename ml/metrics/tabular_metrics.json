@@ -1,0 +1,49 @@
+{
+  "dataset": {
+    "source": "hafsa-kibria/Compost-Dataset (CC BY 4.0)",
+    "url": "https://github.com/hafsa-kibria/Compost-Dataset",
+    "n_samples": 452,
+    "features_used": [
+      "Day",
+      "Temperature",
+      "MC(%)",
+      "C/N Ratio"
+    ],
+    "note": "Tipo de residuo se mapea a C/N Ratio; aireacion se aplica como ajuste heuristico posterior (no esta en el dataset)."
+  },
+  "class_thresholds_on_score": {
+    "q25": 36.00214074,
+    "q50": 51.42948942,
+    "q75": 64.4956772525
+  },
+  "class_order": [
+    "Baja",
+    "Aceptable",
+    "Buena",
+    "Excelente"
+  ],
+  "regressor": {
+    "rmse_mean": 7.183518139969443,
+    "rmse_std": 0.8821601326370858,
+    "mae_mean": 4.572268813796091,
+    "r2_mean": 0.8278099619547662,
+    "folds": 5,
+    "feature_importances": {
+      "Day": 0.3595781176895277,
+      "Temperature": 0.04568655530266442,
+      "MC(%)": 0.37917581215341584,
+      "C/N Ratio": 0.21555951485439206
+    }
+  },
+  "classifier": {
+    "accuracy_mean": 0.7656898656898657,
+    "accuracy_std": 0.05333083983848477,
+    "folds": 5,
+    "feature_importances": {
+      "Day": 0.24804801237391388,
+      "Temperature": 0.13292624978447448,
+      "MC(%)": 0.2857495267096496,
+      "C/N Ratio": 0.3332762111319621
+    }
+  }
+}
