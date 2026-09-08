@@ -1,4 +1,5 @@
 allowBuilds:
-  core-js: false
-  onnxruntime-node: false
-  sharp: false
+  core-js: true
+  onnxruntime-node: true
+  sharp: true
+  unrs-resolver: true

@@ -240,7 +240,7 @@ export function ImageQualityAnalyzer() {
                 </motion.div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center px-6">
-                  Sube una imagen y presiona "Analizar imagen" para ver el resultado aquí.
+                  Sube una imagen y presiona “Analizar imagen” para ver el resultado aquí.
                 </p>
               )}
             </AnimatePresence>

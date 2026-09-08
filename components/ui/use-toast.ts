@@ -15,13 +15,6 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
-const actionTypes = {
-  ADD_TOAST: 'ADD_TOAST',
-  UPDATE_TOAST: 'UPDATE_TOAST',
-  DISMISS_TOAST: 'DISMISS_TOAST',
-  REMOVE_TOAST: 'REMOVE_TOAST',
-} as const
-
 let count = 0
 
 function genId() {
@@ -29,7 +22,16 @@ function genId() {
   return count.toString()
 }
 
-type ActionType = typeof actionTypes
+// Los cuatro tipos de acción del reducer. Antes se derivaban con
+// `typeof actionTypes` a partir de un objeto que solo existía para eso (nunca
+// se usaba como valor en tiempo de ejecución) -- el tipo directo es lo mismo
+// sin el warning de "variable sin usar".
+type ActionType = {
+  ADD_TOAST: 'ADD_TOAST'
+  UPDATE_TOAST: 'UPDATE_TOAST'
+  DISMISS_TOAST: 'DISMISS_TOAST'
+  REMOVE_TOAST: 'REMOVE_TOAST'
+}
 
 type Action =
   | {
