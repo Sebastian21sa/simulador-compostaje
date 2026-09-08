@@ -105,6 +105,31 @@ outputFileTracingIncludes: {
 
 Con este patrón la función queda muy por debajo del límite de 250MB.
 
+## Cuarta vuelta: symlinks de pnpm rompiendo el empaquetado
+
+Con el tamaño ya resuelto, el deploy (visto con `vercel inspect --logs`, que sí muestra el log completo
+a diferencia del dashboard web) falló con:
+
+```
+The framework produced an invalid deployment package for a Serverless Function. Typically this means
+that the framework produces files in symlinked directories. Please verify the framework settings.
+```
+
+Causa: pnpm instala `node_modules` con **symlinks** hacia un almacén interno (`node_modules/.pnpm/...`),
+en vez de copiar los archivos directamente como npm/yarn. El empaquetador de funciones serverless de
+Vercel no sigue bien esos symlinks cuando los archivos se incluyen manualmente vía
+`outputFileTracingIncludes` (justo lo que se necesita para el binario nativo de `onnxruntime-node`).
+
+Corrección: `.npmrc` en la raíz del repo:
+
+```
+node-linker=hoisted
+```
+
+Esto hace que pnpm instale `node_modules` en una estructura plana (sin symlinks, como npm/yarn), evitando
+el problema por completo. Requiere borrar `node_modules` y reinstalar (`pnpm install`) una vez, ya que
+cambia por completo cómo se organiza la carpeta.
+
 ## Pasos para desplegar
 
 1. Confirma que el repo ya está pusheado a GitHub con los cambios de Fase 1-4 (`git push origin main`).
