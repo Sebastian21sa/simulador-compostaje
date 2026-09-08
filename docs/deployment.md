@@ -17,18 +17,38 @@ de la misma forma. Ya quedó resuelto declarando la aprobación directamente en 
 Con esto, `pnpm install` funciona sin intervención manual en cualquier entorno, incluido Vercel y GitHub
 Actions.
 
-También se agregó en `next.config.mjs`:
+## Actualización: esto sí pasó en el primer deploy real
+
+En el primer deploy, "Predecir" falló en producción con "No se pudo calcular la predicción con el
+modelo real" (funcionaba perfecto en local). Era justo el escenario anticipado arriba: `onnxruntime-node`
+carga su binario nativo con un `require()` dinámico
+(`../bin/napi-v3/${process.platform}/${process.arch}/onnxruntime_binding.node`), y `serverExternalPackages`
+por sí solo no es suficiente para que el "file tracing" de Vercel (`@vercel/nft`) incluya ese binario en
+el paquete de la función serverless -- `@vercel/nft` no puede resolver una ruta que depende de variables
+de entorno en tiempo de ejecución.
+
+La corrección final en `next.config.mjs`:
 
 ```js
-serverExternalPackages: ["onnxruntime-node"]
+serverExternalPackages: ["onnxruntime-node"],
+outputFileTracingIncludes: {
+  "/api/predict": [
+    "./node_modules/onnxruntime-node/bin/**/*",
+    "./models/**/*",
+  ],
+},
 ```
 
-`onnxruntime-node` carga su binario nativo con un `require()` dinámico
-(`../bin/napi-v3/${process.platform}/${process.arch}/onnxruntime_binding.node`). Sin esta opción, el
-"file tracing" que usa Vercel para empaquetar la función serverless puede no incluir ese binario, y la
-API de predicción (`app/api/predict/route.ts`) fallaría en producción aunque funcione perfecto en local.
-Esto es exactamente el tipo de error que solo aparece al desplegar, así que vale la pena confirmarlo
-después del primer deploy (ver checklist abajo).
+`outputFileTracingIncludes` le dice explícitamente a Vercel qué archivos incluir (por ruta) cuando el
+tracing automático no los detecta. Se incluyó también `./models/**/*` (los `.onnx` entrenados) por la
+misma razón: `onnxruntime-node` los abre con una ruta de archivo en tiempo de ejecución, no con un
+`import`/`require` estático que el tracer pueda seguir con certeza.
+
+Tras aplicar esto hace falta un nuevo `git push` para que Vercel vuelva a construir con la config
+corregida. Si la predicción sigue fallando después de ese redeploy, el siguiente paso es abrir
+Vercel → tu proyecto → pestaña "Logs" (o el deployment específico → "Functions" → `/api/predict`) y
+copiar el mensaje de error exacto que imprime `console.error("Error en /api/predict:", error)` en
+`app/api/predict/route.ts` -- con eso se puede diagnosticar con precisión en vez de seguir adivinando.
 
 ## Pasos para desplegar
 
