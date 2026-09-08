@@ -76,6 +76,35 @@ Con esto, `pnpm install` se corre exactamente igual pero con `ONNXRUNTIME_NODE_I
 así que el script de instalación de `onnxruntime-node` se salta la descarga de CUDA sin afectar los
 binarios de CPU que sí vienen incluidos en el paquete (esos son los que se usan en producción).
 
+## Tercera vuelta: el error real (usando `vercel --prod` para ver el log completo)
+
+El dashboard web de Vercel cortaba el log justo antes del error real. Usando la CLI (`vercel --prod`,
+que muestra el log completo sin paginar) apareció el mensaje exacto:
+
+```
+Error: The Vercel Function "api/predict" is 422.24mb uncompressed which exceeds the maximum
+uncompressed size limit of 250mb.
+```
+
+Causa real (no era CUDA): el patrón `./node_modules/onnxruntime-node/bin/**/*` en
+`outputFileTracingIncludes` incluye los binarios nativos de **las 6 plataformas** que trae el paquete
+(Windows, macOS Intel/ARM, Linux x64/ARM) -- cada uno con su copia de la librería de ONNX Runtime, que
+pesa varias decenas de MB. Sumados, superan los 400MB. La función serverless de Vercel corre en Linux
+x64 únicamente, así que sobran 5 de esas 6 copias.
+
+Corrección final en `next.config.mjs` -- apuntar solo a la plataforma que realmente se usa en producción:
+
+```js
+outputFileTracingIncludes: {
+  "/api/predict": [
+    "./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/**/*",
+    "./models/**/*",
+  ],
+},
+```
+
+Con este patrón la función queda muy por debajo del límite de 250MB.
+
 ## Pasos para desplegar
 
 1. Confirma que el repo ya está pusheado a GitHub con los cambios de Fase 1-4 (`git push origin main`).

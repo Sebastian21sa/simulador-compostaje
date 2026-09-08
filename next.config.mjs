@@ -10,14 +10,15 @@ const nextConfig = {
   // require() dinamico (`../bin/napi-v3/${process.platform}/${process.arch}/...`).
   // serverExternalPackages evita que webpack intente empaquetarlo, pero el
   // "file tracing" de Vercel (@vercel/nft) tampoco puede resolver esa ruta
-  // dinamica por si solo, asi que hay que decirle explicitamente que incluya
-  // el binario nativo -- y de paso los propios modelos .onnx -- en la
-  // funcion serverless de /api/predict. Sin esto, la API de prediccion
-  // falla en produccion (500) aunque funcione perfecto en local.
+  // dinamica por si solo. La funcion serverless de Vercel corre en
+  // Linux x64, asi que solo se incluye ese binario -- incluir "bin/**/*"
+  // completo trae los binarios de las 6 plataformas que el paquete soporta
+  // (Windows/Mac/Linux x64/arm64) y hace que la funcion pese >400MB,
+  // superando el limite de 250MB de Vercel.
   serverExternalPackages: ["onnxruntime-node"],
   outputFileTracingIncludes: {
     "/api/predict": [
-      "./node_modules/onnxruntime-node/bin/**/*",
+      "./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/**/*",
       "./models/**/*",
     ],
   },

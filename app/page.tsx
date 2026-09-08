@@ -22,7 +22,7 @@ interface PredictResponse {
 }
 
 export default function CompostingSimulator() {
-  const [activeTab, setActiveTab] = useState("simulador")
+  const [activeTab, setActiveTab] = useState("vision")
   const [tipoResiduo, setTipoResiduo] = useState("mezcla")
   const [cantidad, setCantidad] = useState(100)
   const [temperatura, setTemperatura] = useState(52)
@@ -129,6 +129,10 @@ export default function CompostingSimulator() {
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-5 h-auto p-1 bg-secondary/50">
+            <TabsTrigger value="vision" className="flex items-center gap-2 py-3">
+              <Camera className="h-4 w-4" />
+              <span className="hidden sm:inline">Visión</span>
+            </TabsTrigger>
             <TabsTrigger value="simulador" className="flex items-center gap-2 py-3">
               <Leaf className="h-4 w-4" />
               <span className="hidden sm:inline">Simulador</span>
@@ -136,10 +140,6 @@ export default function CompostingSimulator() {
             <TabsTrigger value="modelo" className="flex items-center gap-2 py-3">
               <FlaskConical className="h-4 w-4" />
               <span className="hidden sm:inline">Modelo</span>
-            </TabsTrigger>
-            <TabsTrigger value="vision" className="flex items-center gap-2 py-3">
-              <Camera className="h-4 w-4" />
-              <span className="hidden sm:inline">Visión</span>
             </TabsTrigger>
             <TabsTrigger value="graficas" className="flex items-center gap-2 py-3">
               <BarChart3 className="h-4 w-4" />
