@@ -50,6 +50,32 @@ Vercel → tu proyecto → pestaña "Logs" (o el deployment específico → "Fun
 copiar el mensaje de error exacto que imprime `console.error("Error en /api/predict:", error)` en
 `app/api/predict/route.ts` -- con eso se puede diagnosticar con precisión en vez de seguir adivinando.
 
+## Segunda vuelta: el build mismo empezó a fallar
+
+Después de aprobar `pnpm.onlyBuiltDependencies`, el *build* completo en Vercel empezó a fallar (antes sí
+terminaba, solo la API fallaba en runtime). El log de build mostró que Next.js compila y genera las
+páginas sin problema; el corte ocurre en el paso final de Vercel ("Running onBuildComplete").
+
+Causa: al aprobar `onnxruntime-node` en `onlyBuiltDependencies`, Vercel ahora sí ejecuta su script de
+`postinstall`. Ese script, en cualquier máquina Linux x64 sin GPU (como las de Vercel), intenta descargar
+automáticamente binarios de CUDA (~1GB) desde GitHub -- algo pensado para quien necesita aceleración por
+GPU, completamente innecesario aquí (el modelo es un Random Forest chico que corre en CPU). Esa descarga
+de casi 1GB muy probablemente esté rompiendo el paso de empaquetado de la función serverless (por tamaño
+o por tiempo).
+
+Corrección: `vercel.json` en la raíz del repo, forzando la variable de entorno que el propio script de
+`onnxruntime-node` reconoce para saltarse esa descarga:
+
+```json
+{
+  "installCommand": "ONNXRUNTIME_NODE_INSTALL_CUDA=skip pnpm install"
+}
+```
+
+Con esto, `pnpm install` se corre exactamente igual pero con `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` fijo,
+así que el script de instalación de `onnxruntime-node` se salta la descarga de CUDA sin afectar los
+binarios de CPU que sí vienen incluidos en el paquete (esos son los que se usan en producción).
+
 ## Pasos para desplegar
 
 1. Confirma que el repo ya está pusheado a GitHub con los cambios de Fase 1-4 (`git push origin main`).
