@@ -1,6 +1,6 @@
 # Plan de evolución — Simulador de Compostaje con ML
 
-**Estado:** Fase 1 (modelo tabular real) y Fase 2 (visión: detector de contaminantes) completadas e integradas en el repo. Quedan Fase 3 (gráficas ya parcialmente actualizadas con datos reales) y Fase 4 (despliegue) por confirmar/cerrar.
+**Estado:** Fases 1, 2, 3 y 4 completadas. Falta que hagas el commit/push final y el primer deploy en Vercel siguiendo `docs/deployment.md`.
 **Alcance:** pasar de un simulador con fórmulas heurísticas a un producto con modelo tabular real, módulo de visión por computadora, gráficas derivadas del modelo real, y despliegue — todo dentro de un único proyecto Next.js.
 
 ## 1. Punto de partida
@@ -54,21 +54,38 @@ Lo implementado:
 - `components/composting/image-quality-analyzer.tsx`: nueva pestaña "Visión" — sube una foto, corre la inferencia **en el navegador** con `@tensorflow/tfjs` (ninguna imagen se envía a un servidor), muestra el resultado con nivel de confianza y las métricas reales del modelo.
 - Modelo servido como archivo estático en `public/models/tfjs_contaminant_detector/` (~1MB).
 
-## 5. Fase 3 — Gráficas basadas en el modelo real (parcialmente completada)
+## 5. Fase 3 — Gráficas basadas en el modelo real ✅ completada
 
-`charts-section.tsx` ya usa la importancia de variables real del `RandomForestRegressor` de la Fase 1 (`Day`=0.360, `MC(%)`=0.379, `C/N Ratio`=0.216, `Temperature`=0.046) en vez de los porcentajes inventados originales. Pendiente de decidir/hacer:
-- Las curvas de temperatura/humedad/tiempo siguen siendo curvas de referencia basadas en literatura (no partial dependence del modelo real): al calcular la dependencia parcial real se encontraron formas que no coinciden limpiamente con la campana de la literatura y requieren un encuadre cuidadoso en la UI antes de reemplazarlas — para no reemplazar una simplificación honesta por otra que confunda al usuario.
-- Falta la matriz de confusión del modelo de visión en esta pestaña (hoy vive en la nueva pestaña "Visión").
+`charts-section.tsx` usa la importancia de variables real del `RandomForestRegressor` (`Day`=0.360, `MC(%)`=0.379, `C/N Ratio`=0.216, `Temperature`=0.046). Además, cada una de las pestañas Temperatura/Humedad/Tiempo ahora muestra, debajo de la curva de referencia teórica, la **dependencia parcial real** (`sklearn.inspection.partial_dependence`) calculada sobre el `RandomForestRegressor` entrenado (script `ml/compute_pdp.py`, datos en `lib/model-pdp-data.ts`).
 
-## 6. Fase 4 — Despliegue (pendiente)
+El resultado se presenta con honestidad, no se forzó a calzar con la literatura:
+- **Tiempo**: buena concordancia de forma (sube y luego se estabiliza en meseta), aunque el modelo real satura más rápido (~día 20-25) que la curva de referencia (~día 60).
+- **Temperatura**: el modelo muestra un efecto débil y casi plano, consistente con ser la variable de menor importancia (4.6%) — no reproduce la campana 45-60°C de la literatura, probablemente por correlación con otras variables en los datos reales (la dependencia parcial asume independencia, algo que no se cumple aquí).
+- **Humedad**: efecto fuerte pero en forma de escalón (cae bruscamente entre 42-50% de humedad), no la campana simétrica de la literatura — una diferencia real entre lo que dicen los datos observacionales de este dataset específico y el consenso general de la literatura.
 
-Con todo dentro de Next.js (Route Handler ONNX + TensorFlow.js en cliente), el despliegue es un `vercel deploy` del repo actual. Puntos a validar antes de desplegar:
-- Tamaño del artefacto ONNX + `onnxruntime-node` dentro del límite de función serverless de Vercel (250MB sin comprimir) — sin problema con un Random Forest pequeño.
-- Cold starts de la función que carga ONNX.
-- El modelo de visión (`public/models/tfjs_contaminant_detector/`, ~1MB) se sirve como estático, no cuenta contra el límite de función.
-- Ejecutar `pnpm install && pnpm build` localmente para confirmar que todo compila con las nuevas dependencias (`onnxruntime-node@1.21.0`, `@tensorflow/tfjs@4.22.0`) — no se pudo verificar un build completo desde este entorno por restricciones de red/tiempo del entorno de trabajo remoto, solo verificación de sintaxis de cada archivo nuevo/modificado.
-- CI básico (GitHub Actions) que corra lint/build en cada push, igual que en PongIQ.
+La matriz de confusión del modelo de visión se muestra en la nueva pestaña "Visión" (no se duplicó aquí).
+
+## 6. Fase 4 — Despliegue ✅ preparado (falta el deploy en sí)
+
+Hallazgo real durante esta fase: al instalar dependencias apareció `ERR_PNPM_IGNORED_BUILDS` — pnpm
+(v10+) bloquea por seguridad los scripts `postinstall` de paquetes nuevos (`onnxruntime-node`, `sharp`,
+`core-js`) hasta aprobarlos con `pnpm approve-builds`. Esa aprobación se guarda solo en la máquina local,
+no en el repo, así que un build limpio en Vercel habría fallado igual. Se corrigió declarando la
+aprobación en `package.json` (`pnpm.onlyBuiltDependencies`).
+
+También se agregó `serverExternalPackages: ["onnxruntime-node"]` en `next.config.mjs`: ese paquete carga
+su binario nativo con un `require()` dinámico según plataforma/arquitectura, y sin esta opción el "file
+tracing" de Vercel puede no incluirlo en la función serverless — un error que solo aparecería en
+producción, no en local.
+
+Se agregó `.github/workflows/ci.yml` (lint + build en cada push a `main`, igual que en PongIQ).
+
+Ver `docs/deployment.md` para el paso a paso de despliegue en Vercel y el checklist de verificación
+post-deploy (incluye qué revisar si `onnxruntime-node` fallara en producción a pesar de estos ajustes,
+con la opción B de respaldo: microservicio Python en Render, igual que PongIQ).
 
 ## 7. Próximo paso inmediato
 
-Correr `pnpm install && pnpm build` localmente para confirmar que compila con los cambios de Fase 1 y Fase 2, revisar visualmente las pestañas "Modelo" y "Visión" en `pnpm dev`, y decidir si se avanza con Fase 3 (partial dependence) y Fase 4 (despliegue en Vercel).
+De tu lado: `git add . && git commit && git push`, confirmar que el CI queda en verde, y seguir
+`docs/deployment.md` para el primer deploy en Vercel. El proyecto queda con backend real (ONNX), visión
+por computadora real (TensorFlow.js), gráficas derivadas del modelo real, y listo para desplegarse.
