@@ -7,9 +7,10 @@ import { SimulatorForm } from "@/components/composting/simulator-form"
 import { ResultsDisplay } from "@/components/composting/results-display"
 import { ChartsSection } from "@/components/composting/charts-section"
 import { ModelTraining } from "@/components/composting/model-training"
+import { ImageQualityAnalyzer } from "@/components/composting/image-quality-analyzer"
 import { ReferencesSection } from "@/components/composting/references-section"
 import { motion } from "framer-motion"
-import { Leaf, FlaskConical, BarChart3, BookOpen, Sparkles } from "lucide-react"
+import { Leaf, FlaskConical, BarChart3, BookOpen, Sparkles, Camera } from "lucide-react"
 
 interface PredictResponse {
   produccion: number
@@ -127,7 +128,7 @@ export default function CompostingSimulator() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 h-auto p-1 bg-secondary/50">
+          <TabsList className="grid grid-cols-5 h-auto p-1 bg-secondary/50">
             <TabsTrigger value="simulador" className="flex items-center gap-2 py-3">
               <Leaf className="h-4 w-4" />
               <span className="hidden sm:inline">Simulador</span>
@@ -135,6 +136,10 @@ export default function CompostingSimulator() {
             <TabsTrigger value="modelo" className="flex items-center gap-2 py-3">
               <FlaskConical className="h-4 w-4" />
               <span className="hidden sm:inline">Modelo</span>
+            </TabsTrigger>
+            <TabsTrigger value="vision" className="flex items-center gap-2 py-3">
+              <Camera className="h-4 w-4" />
+              <span className="hidden sm:inline">Visión</span>
             </TabsTrigger>
             <TabsTrigger value="graficas" className="flex items-center gap-2 py-3">
               <BarChart3 className="h-4 w-4" />
@@ -197,6 +202,11 @@ export default function CompostingSimulator() {
           {/* Modelo Tab */}
           <TabsContent value="modelo" className="mt-6">
             <ModelTraining />
+          </TabsContent>
+
+          {/* Visión Tab */}
+          <TabsContent value="vision" className="mt-6">
+            <ImageQualityAnalyzer />
           </TabsContent>
 
           {/* Gráficas Tab */}

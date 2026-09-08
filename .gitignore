@@ -8,3 +8,9 @@ node_modules
 .next/
 .env*.local
 .DS_Store
+# Dataset crudo de imagenes (36MB, descargado de Roboflow) -- no se versiona;
+# los scripts en ml/vision/ documentan como regenerarlo. El dataset binario
+# reorganizado (vision/binary/) tampoco se versiona por la misma razon.
+ml/data-imagenes/
+vision/binary/
+vision/raw/

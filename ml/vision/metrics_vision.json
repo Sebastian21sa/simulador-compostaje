@@ -1,0 +1,57 @@
+{
+  "class_names": [
+    "compostable",
+    "contaminante"
+  ],
+  "test_accuracy": 0.716312050819397,
+  "test_loss": 0.5871047973632812,
+  "confusion_matrix": [
+    [
+      28,
+      23
+    ],
+    [
+      17,
+      73
+    ]
+  ],
+  "classification_report": {
+    "compostable": {
+      "precision": 0.6222222222222222,
+      "recall": 0.5490196078431373,
+      "f1-score": 0.5833333333333334,
+      "support": 51.0
+    },
+    "contaminante": {
+      "precision": 0.7604166666666666,
+      "recall": 0.8111111111111111,
+      "f1-score": 0.7849462365591398,
+      "support": 90.0
+    },
+    "accuracy": 0.7163120567375887,
+    "macro avg": {
+      "precision": 0.6913194444444444,
+      "recall": 0.6800653594771242,
+      "f1-score": 0.6841397849462365,
+      "support": 141.0
+    },
+    "weighted avg": {
+      "precision": 0.7104314420803782,
+      "recall": 0.7163120567375887,
+      "f1-score": 0.7120224204987416,
+      "support": 141.0
+    }
+  },
+  "n_train": 424,
+  "dataset": {
+    "source": "Compost classification (Johns Hopkins University, Roboflow Universe)",
+    "url": "https://universe.roboflow.com/johns-hopkins-university-ipy8c/compost-classification",
+    "license": "CC BY 4.0",
+    "note": "38 clases originales reagrupadas en 2 (compostable/contaminante) segun guias comunes de compostaje."
+  },
+  "architecture": "CNN compacta entrenada desde cero (4 bloques conv+BN+pool, sin pesos preentrenados -- storage.googleapis.com, origen de TODOS los pesos ImageNet de Keras, esta bloqueado en este entorno de entrenamiento)",
+  "img_size": [
+    160,
+    160
+  ]
+}
